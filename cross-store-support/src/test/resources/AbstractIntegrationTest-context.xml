@@ -1,0 +1,76 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd">
+
+	<context:component-scan base-package="com.mangofactory.crossstore" />
+	<aop:aspectj-autoproxy />
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="packagesToScan">
+			<list>
+				<value>com.mangofactory.crossstore</value>
+			</list>
+		</property>
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="showSql" value="true" />
+				<property name="generateDdl" value="true" />
+				<property name="databasePlatform" value="org.hibernate.dialect.H2Dialect" />
+			</bean>
+		</property>
+	</bean>
+
+
+	<tx:annotation-driven />
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!-- JPA setup -->
+	<jpa:repositories base-package="com.mangofactory.crossstore.dao.jpa" />
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="org.h2.Driver" />
+		<property name="url" value="jdbc:h2:mem:test;DB_CLOSE_DELAY=-1" />
+	</bean>
+
+	<!-- MongoDB setup -->
+	<!-- Actual database is defined in either dataAccessContext, or test context 
+		somewhere -->
+	<mongo:db-factory id="mongoDbFactory" dbname="crossstore-test" />
+
+	<mongo:repositories base-package="com.mangofactory.crossstore.dao.document" />
+	<bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+		<constructor-arg ref="mongoDbFactory" />
+		<constructor-arg ref="mappingConverter" />
+	</bean>
+	<mongo:mapping-converter id="mappingConverter"
+		base-package="com.mangofactory">
+		<mongo:custom-converters>
+			<mongo:converter ref="relatedEntityReader" />
+			<mongo:converter ref="relatedEntityWriter" />
+		</mongo:custom-converters>
+	</mongo:mapping-converter>
+	<!-- Mongo converters -->
+	<bean id="relatedEntityReader"
+		class="com.mangofactory.crossstore.converters.RelatedEntityReader" />
+	<bean id="relatedEntityWriter"
+		class="com.mangofactory.crossstore.converters.RelatedEntityWriter" />
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+
+
+</beans>
