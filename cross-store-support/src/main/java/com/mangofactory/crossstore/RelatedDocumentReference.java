@@ -5,11 +5,13 @@ import static org.springframework.data.mongodb.core.query.Query.query;
 
 import java.lang.reflect.Field;
 
+import org.h2.table.TableLinkConnection;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.util.ReflectionUtils;
 
+import com.mangofactory.crossstore.aop.ThreadLocalEntityCache;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
@@ -23,6 +25,7 @@ public class RelatedDocumentReference {
 	private final Field field;
 	private final Class<?> collectionClass;
 	private final Object ownerId;
+	private final String cacheKey;
 	private Object documentId;
 	public RelatedDocumentReference(Object target, Field field, Object ownerId)
 	{
@@ -30,8 +33,17 @@ public class RelatedDocumentReference {
 		this.target = target;
 		this.field = field;
 		this.ownerId = ownerId;
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(ENTITY_ID).append("=").append(ownerId.toString()).append("|")
+			.append(ENTITY_CLASS).append("=").append(target.getClass().getName()).append("|")
+			.append(ENTITY_FIELD_NAME).append("=").append(field.getName());
+		cacheKey = sb.toString();
 	}
-	
+	public String getCacheKey()
+	{
+		return cacheKey;
+	}
 	public Query getQuery()
 	{
 		Query query = query(
@@ -51,8 +63,8 @@ public class RelatedDocumentReference {
 		return dbObject;
 	}
 
-	public void setValue(BasicDBObject dbObject, MongoConverter converter) {
-		Object value = converter.read(getCollectionClass(), dbObject);
+	public void setValue(Object value)
+	{
 		ReflectionUtils.makeAccessible(field);
 		try {
 			field.set(target, value);
@@ -60,6 +72,11 @@ public class RelatedDocumentReference {
 			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
+	}
+	public void setValue(BasicDBObject dbObject, MongoConverter converter) {
+		Object value = converter.read(getCollectionClass(), dbObject);
+		ThreadLocalEntityCache.putIfNotExists(cacheKey,value);
+		setValue(value);
 	}
 
 	public Object getValue()

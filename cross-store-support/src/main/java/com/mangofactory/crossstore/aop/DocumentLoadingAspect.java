@@ -2,8 +2,11 @@ package com.mangofactory.crossstore.aop;
 
 import java.util.List;
 
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.h2.table.TableLinkConnection;
 import org.springframework.stereotype.Component;
 
 import com.mangofactory.crossstore.RelatedDocumentReference;
@@ -14,24 +17,44 @@ import com.mongodb.DBObject;
 @Component
 public class DocumentLoadingAspect extends AbstractDocumentAspect {
 
-	@AfterReturning(
-			pointcut="execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.find*(..))",
-			returning="fetchedEntity"
-			)
-	public void setDocumentsAfterLoad(Object fetchedEntity)
+	@Around("execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.find*(..))")
+	public Object loadCrossStoreEntity(ProceedingJoinPoint pjp) throws Throwable
 	{
+		ThreadLocalEntityCache.reset();
+		Object fetchedEntity = pjp.proceed();
+		setDocumentsAfterLoad(fetchedEntity);
+		return fetchedEntity;
+	}
+
+	public void setDocumentsAfterLoad(Object fetchedEntity) {
 		if (fetchedEntity instanceof Iterable)
 		{
 			setCollectionAfterLoad((Iterable<?>) fetchedEntity);
 			return;
 		}
-		List<RelatedDocumentReference> documents = findDocuments(fetchedEntity);
-		for (RelatedDocumentReference relatedDocumentReference : documents) {
-			BasicDBObject dbObject = retrieveRelatedDocument(relatedDocumentReference);
-			if (dbObject != null)
-				relatedDocumentReference.setValue(dbObject,mongoTemplate.getConverter());
 
+		cache(fetchedEntity);
+
+		List<RelatedDocumentReference> documents = findDocuments(fetchedEntity);
+		for (RelatedDocumentReference documentReference : documents) {
+			populate(documentReference);
 		}
+	}
+
+	void populate(RelatedDocumentReference documentReference) {
+		if (ThreadLocalEntityCache.contains(documentReference.getCacheKey()))
+		{
+			documentReference.setValue(ThreadLocalEntityCache.get(documentReference.getCacheKey()));
+		} else {
+			BasicDBObject dbObject = retrieveRelatedDocument(documentReference);
+			if (dbObject != null)
+				documentReference.setValue(dbObject,mongoTemplate.getConverter());
+		}
+	}
+
+	private void cache(Object fetchedEntity) {
+		Object identifier = entityManagerFactory.getPersistenceUnitUtil().getIdentifier(fetchedEntity);
+		ThreadLocalEntityCache.put(fetchedEntity, identifier);
 	}
 
 	private void setCollectionAfterLoad(Iterable<?> fetchedEntity) {
