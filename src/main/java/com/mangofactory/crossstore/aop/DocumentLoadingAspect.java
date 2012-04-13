@@ -7,15 +7,17 @@ import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.h2.table.TableLinkConnection;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 import com.mangofactory.crossstore.RelatedDocumentReference;
+import com.mangofactory.crossstore.converters.PopulateDocumentsEvent;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
 @Aspect
 @Component
-public class DocumentLoadingAspect extends AbstractDocumentAspect {
+public class DocumentLoadingAspect extends AbstractDocumentAspect implements ApplicationListener<PopulateDocumentsEvent> {
 
 	@Around("execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.find*(..))")
 	public Object loadCrossStoreEntity(ProceedingJoinPoint pjp) throws Throwable
@@ -61,6 +63,11 @@ public class DocumentLoadingAspect extends AbstractDocumentAspect {
 		for (Object object : fetchedEntity) {
 			setDocumentsAfterLoad(object);
 		}
+	}
+
+	@Override
+	public void onApplicationEvent(PopulateDocumentsEvent event) {
+		setDocumentsAfterLoad(event.getEntity());
 	}
 
 }

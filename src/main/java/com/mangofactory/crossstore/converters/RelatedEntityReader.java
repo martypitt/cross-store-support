@@ -6,7 +6,12 @@ import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
 
@@ -15,13 +20,12 @@ import com.mangofactory.crossstore.aop.DocumentLoadingAspect;
 import com.mangofactory.crossstore.aop.ThreadLocalEntityCache;
 import com.mongodb.BasicDBObject;
 
-public class RelatedEntityReader implements ConditionalGenericConverter {
+public class RelatedEntityReader implements ConditionalGenericConverter, ApplicationEventPublisherAware {
 
 	@PersistenceContext
 	private EntityManager entityManager;
 
-	@Autowired
-	private DocumentLoadingAspect documentLoader;
+	private ApplicationEventPublisher eventPublisher;
 
 	public Object convert(BasicDBObject source) {
 		String className = source.getString("_entityClass");
@@ -48,11 +52,17 @@ public class RelatedEntityReader implements ConditionalGenericConverter {
 			if (entity != null)
 			{
 				ThreadLocalEntityCache.put(entity, entityKey);
-				// Populate the entity .. it may have other references
-				documentLoader.setDocumentsAfterLoad(entity);
+				populateDocumentsIfRequired(entity);
 			}
 		}
 		return entity;
+	}
+
+	private void populateDocumentsIfRequired(Object entity) {
+		// Send an event, rather than using a hard reference
+		// on the DocumentLoadingAspect, which can introduce
+		// a cyclical dependency
+		eventPublisher.publishEvent(new PopulateDocumentsEvent(entity));
 	}
 
 	@Override
@@ -71,5 +81,12 @@ public class RelatedEntityReader implements ConditionalGenericConverter {
 	@Override
 	public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
 		return true;
+	}
+
+	@Override
+	public void setApplicationEventPublisher(
+			ApplicationEventPublisher applicationEventPublisher) {
+		this.eventPublisher = applicationEventPublisher;
+		
 	}
 }

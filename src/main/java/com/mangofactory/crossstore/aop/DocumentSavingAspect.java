@@ -33,7 +33,7 @@ import com.mongodb.DBObject;
 public class DocumentSavingAspect extends AbstractDocumentAspect  implements InitializingBean {
 	
 	@Autowired
-	RelatedDocumentIdUpdater idUpdater;
+	private RelatedDocumentIdUpdater idUpdater;
 	
 	
 	@Around("execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.save(..))")
