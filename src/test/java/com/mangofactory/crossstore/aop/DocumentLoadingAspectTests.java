@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.mangofactory.crossstore.AbstractIntegrationTest;
 import com.mangofactory.crossstore.dao.document.BookDAO;
@@ -17,6 +18,7 @@ import com.mangofactory.crossstore.dao.jpa.AuthorDAO;
 import com.mangofactory.crossstore.test.Author;
 import com.mangofactory.crossstore.test.Book;
 
+@Transactional
 public class DocumentLoadingAspectTests extends AbstractIntegrationTest {
 
 	@Autowired
@@ -36,6 +38,23 @@ public class DocumentLoadingAspectTests extends AbstractIntegrationTest {
 		authorDAO.save(author);
 		createdAuthor = author;
 	}
+	@Test
+	public void afterSavingThatBookIdIsPopulated()
+	{
+		Book book = createdAuthor.getBook();
+		assertThat(book.getId(), notNullValue());
+	}
+			
+	@Test
+	public void afterSavingThatBookExistsInMongo()
+	{
+		assertThat(bookDAO.count(), equalTo(1L));
+		String bookId = createdAuthor.getBook().getId();
+		Book book = bookDAO.findOne(bookId);
+		assertThat(book.getTitle(), equalTo("Effective Java"));
+		assertThat(book.getAuthor().getName(),equalTo("Josh Bloch"));
+	}
+	
 	@Test
 	public void testLoadingManyFromRepo()
 	{

@@ -8,6 +8,7 @@ import javax.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
 
 import com.mangofactory.crossstore.CrossStoreReferenceFinder;
 import com.mangofactory.crossstore.RelatedDocumentReference;
@@ -19,7 +20,7 @@ public abstract class AbstractDocumentAspect {
 	protected MongoTemplate mongoTemplate;
 	
 	@Autowired
-	private MongoOperations mongoOperations;
+	protected MongoOperations mongoOperations;
 
 	@Autowired
 	protected EntityManagerFactory entityManagerFactory;

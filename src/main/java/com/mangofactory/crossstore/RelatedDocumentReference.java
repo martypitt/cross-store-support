@@ -60,6 +60,11 @@ public class RelatedDocumentReference {
 		dbObject.put(ENTITY_CLASS, target.getClass().getName());
 		dbObject.put(ENTITY_FIELD_NAME, field.getName());
 		converter.write(getValue(), dbObject);
+		
+		if (!dbObject.containsField("id"))
+		{
+			dbObject.put("id", null);
+		}
 		return dbObject;
 	}
 

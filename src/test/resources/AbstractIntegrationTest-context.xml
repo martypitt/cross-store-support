@@ -57,6 +57,11 @@
 		<constructor-arg ref="mongoDbFactory" />
 		<constructor-arg ref="mappingConverter" />
 	</bean>
+
+	<bean id="relatedEntityReader"
+		class="com.mangofactory.crossstore.converters.RelatedEntityReader" />
+	<bean id="relatedEntityWriter"
+		class="com.mangofactory.crossstore.converters.RelatedEntityWriter" />
 	<mongo:mapping-converter id="mappingConverter"
 		base-package="com.mangofactory">
 		<mongo:custom-converters>
@@ -65,10 +70,6 @@
 		</mongo:custom-converters>
 	</mongo:mapping-converter>
 	<!-- Mongo converters -->
-	<bean id="relatedEntityReader"
-		class="com.mangofactory.crossstore.converters.RelatedEntityReader" />
-	<bean id="relatedEntityWriter"
-		class="com.mangofactory.crossstore.converters.RelatedEntityWriter" />
 	<bean id="persistenceAnnotation"
 		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
 
