@@ -11,7 +11,7 @@
 	</organization>
 	<properties>
 		<spring.version>3.1.0.RELEASE</spring.version>
-		<spring.data.jpa.version>1.1.0.RC1</spring.data.jpa.version>
+		<spring.data.jpa.version>1.1.0.RELEASE</spring.data.jpa.version>
 		<spring.data.mongo.version>1.1.0.M1</spring.data.mongo.version>
 		<query.dsl.version>2.3.0</query.dsl.version>
 	</properties>
