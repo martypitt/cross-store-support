@@ -5,8 +5,6 @@ import static org.springframework.data.mongodb.core.query.Query.query;
 
 import java.lang.reflect.Field;
 
-import org.h2.table.TableLinkConnection;
-import org.springframework.beans.BeanUtils;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.util.ReflectionUtils;

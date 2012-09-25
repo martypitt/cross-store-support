@@ -3,23 +3,20 @@ package com.mangofactory.crossstore.aop;
 import java.util.List;
 
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.h2.table.TableLinkConnection;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.ApplicationEvent;
 import org.springframework.stereotype.Component;
 
 import com.mangofactory.crossstore.RelatedDocumentReference;
 import com.mangofactory.crossstore.converters.PopulateDocumentsEvent;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 
 @Aspect
-@Component
-public class DocumentLoadingAspect extends AbstractDocumentAspect implements ApplicationListener<PopulateDocumentsEvent> {
-
-	@Around("execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.find*(..))")
+//@Component
+public class DocumentLoadingAspect extends AbstractDocumentAspect {
+	
+	@Around("execution(* com.mangofactory.crossstore.repository.CrossStore*.find*(..))")
 	public Object loadCrossStoreEntity(ProceedingJoinPoint pjp) throws Throwable
 	{
 		ThreadLocalEntityCache.reset();
@@ -66,8 +63,12 @@ public class DocumentLoadingAspect extends AbstractDocumentAspect implements App
 	}
 
 	@Override
-	public void onApplicationEvent(PopulateDocumentsEvent event) {
-		setDocumentsAfterLoad(event.getEntity());
+	public void onApplicationEvent(ApplicationEvent event) {
+		super.onApplicationEvent(event);
+		if (event instanceof PopulateDocumentsEvent)
+		{
+			setDocumentsAfterLoad(((PopulateDocumentsEvent)event).getEntity());	
+		}
 	}
 
 }

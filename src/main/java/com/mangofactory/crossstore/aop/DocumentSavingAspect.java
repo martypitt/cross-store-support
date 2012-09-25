@@ -4,6 +4,8 @@ import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -28,13 +30,14 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
 
-@Component
+//@Component
 @Aspect
-public class DocumentSavingAspect extends AbstractDocumentAspect  implements InitializingBean {
+public class DocumentSavingAspect extends AbstractDocumentAspect {
 	
 	@Autowired
 	private RelatedDocumentIdUpdater idUpdater;
 	
+	private Queue<Object> queuedEntitiesToSave = new LinkedBlockingQueue<Object>();
 	
 	@Around("execution(* com.mangofactory.crossstore.repository.CrossStoreJpaRepository.save(..))")
 	public Object saveDocumentsAfterSave(ProceedingJoinPoint pjp) throws Throwable
@@ -45,6 +48,15 @@ public class DocumentSavingAspect extends AbstractDocumentAspect  implements Ini
 		{
 			return savedEntity;
 		}
+		if (isInitialized())
+		{
+			saveRelatedDocuments(unsavedEntity);
+		} else {
+			queuedEntitiesToSave.add(unsavedEntity);
+		}
+		return savedEntity;
+	}
+	void saveRelatedDocuments(Object unsavedEntity) {
 		List<RelatedDocumentReference> documents = findDocuments(unsavedEntity);
 		for (RelatedDocumentReference relatedDocument : documents) {
 			// TODO : For now we do a delete/insert.  In future, this should do an update.
@@ -59,7 +71,6 @@ public class DocumentSavingAspect extends AbstractDocumentAspect  implements Ini
 				idUpdater.stopListeningFor(dbObject);
 			}
 		}
-		return savedEntity;
 	}
 	protected MappingContext<? extends MongoPersistentEntity<?>, MongoPersistentProperty> getMappingContext()
 	{
@@ -74,7 +85,15 @@ public class DocumentSavingAspect extends AbstractDocumentAspect  implements Ini
 		}
 	}
 	@Override
-	public void afterPropertiesSet() throws Exception {
+	public void afterInitialized() {
 		idUpdater.setMongoConverter(mongoTemplate.getConverter());
+		saveQueuedEntities();
+	}
+	private void saveQueuedEntities() {
+		while (!queuedEntitiesToSave.isEmpty())
+		{
+			Object entitiy = queuedEntitiesToSave.poll();
+			saveRelatedDocuments(entitiy);
+		}
 	}
 }
